@@ -9,6 +9,8 @@ BUILD_DIR := ./build
 
 # Arquivos fonte
 SRCS := $(SRC_DIR)/main.cpp \
+		$(SRC_DIR)/cripto/Cripto.cpp \
+		$(SRC_DIR)/window_manager/WindowManager.cpp \
         $(GLAD_DIR)/glad.c
 
 # Arquivos fonte do ImGui
@@ -51,8 +53,11 @@ $(BUILD_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-run: all
-	./$(BUILD_DIR)/$(EXECUTABLE)
+sender: all
+	./$(BUILD_DIR)/$(EXECUTABLE) "sender"
+
+receiver: all
+	./$(BUILD_DIR)/$(EXECUTABLE) "receiver"
 
 # Regra para limpar os arquivos gerados
 clean:
