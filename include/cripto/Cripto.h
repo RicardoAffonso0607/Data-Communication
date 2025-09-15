@@ -1,19 +1,21 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include <cstring> 
+#include <bitset>
 
 class Cripto {
-private:
-    std::string chave;
+    public:
+        // The constructor now accepts a key of type char* and its size.
+        Cripto(const char* encryptionKey, size_t keySize);
+        ~Cripto();
 
-public:
-    // Construtor que recebe a chave como string
-    Cripto(const std::string& chaveCriptografia);
+        char* encrypt(const char* plainText, size_t keySize);
+        char* decrypt(const char* encryptedText, size_t keySize);
 
-    // Função para criptografar uma string
-    std::string criptografar(const std::string& textoPuro);
+        char* toBinary(const char* input, size_t keySize);
+        char* toChar(const char* binaryInput, size_t binarySize); 
 
-    // Função para descriptografar uma string
-    std::string descriptografar(const std::string& textoCriptografado);
+    private:
+        char* key;
+        size_t keySize;
 };

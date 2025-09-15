@@ -14,12 +14,17 @@ using namespace std;
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+// Header da classe para lidar com criptografia
+#include "../../include/cripto/Cripto.h"
+
 class WindowManager {
 private:
+    // Sender
     char originalMessage[2048];
     char binaryMessage[2048]; 
     char encryptedMessage[2048];
 
+    // Receiver
     char decryptedMessage[2048];
     char receivedMessage[2048];
 
@@ -27,6 +32,8 @@ private:
     vector<float> decryptionWaveform;
 
     GLFWwindow* window;
+
+    Cripto* cripto;
 
 public:
     explicit WindowManager();

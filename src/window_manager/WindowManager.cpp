@@ -5,6 +5,10 @@ void glfwErrorCallback(int error, const char* description);
 
 WindowManager::WindowManager() {
 
+    const char* chave = "minhachave123";
+    size_t tamanhoChave = strlen(chave);
+    this->cripto = new Cripto(chave, tamanhoChave);
+
     glfwSetErrorCallback(glfwErrorCallback);
 
     if (!glfwInit()) {
@@ -16,7 +20,7 @@ WindowManager::WindowManager() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    this->window = glfwCreateWindow(1280, 720, "Cripto-Com Project", NULL, NULL);
+    this->window = glfwCreateWindow(1280, 960, "Cripto-Com Project", NULL, NULL);
     if (this->window == NULL) {
         exit(1);
     }
@@ -32,6 +36,10 @@ WindowManager::WindowManager() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
+    ImFont* font = io.Fonts->AddFontFromFileTTF("./assets/Roboto-Regular.ttf", 20.0f);
+    if (font) {
+        ImGui::PushFont(font);
+    }
     ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOpenGL(this->window, true);
@@ -79,29 +87,50 @@ void WindowManager::createSenderWindow() {
         // --- Coluna 1: Processo de Envio (Sender) ---
         ImGui::Text("Lado do Remetente (Envio)");
         ImGui::Separator();
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
         // Campo para digitar a mensagem original
         ImGui::InputTextMultiline("Mensagem Original", this->originalMessage, IM_ARRAYSIZE(this->originalMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
-        
-        // Botão de Criptografar e Enviar
-        if (ImGui::Button("Criptografar e Enviar")) {
-            // Ação: Lógica de criptografia, geração de binário, gráfico e envio
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            strcpy(this->encryptedMessage, this->cripto->encrypt(this->originalMessage, strlen(this->originalMessage)));
+            strcpy(this->binaryMessage, this->cripto->toBinary(this->encryptedMessage, strlen(this->originalMessage)));
         }
 
-        // Campo editável para a mensagem em binário 
-        ImGui::Text("Mensagem em Binário");
-        ImGui::InputTextMultiline("##binary", this->binaryMessage, IM_ARRAYSIZE(this->binaryMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
         // Campo editável para a mensagem criptografada 
         ImGui::Text("Mensagem Criptografada");
         ImGui::InputTextMultiline("##encrypted", this->encryptedMessage, IM_ARRAYSIZE(this->encryptedMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
-        
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            strcpy(this->originalMessage, this->cripto->decrypt(this->encryptedMessage, strlen(this->encryptedMessage)));
+            strcpy(this->binaryMessage, this->cripto->toBinary(this->encryptedMessage, strlen(this->encryptedMessage)));
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+
+        // Campo editável para a mensagem em binário 
+        ImGui::Text("Mensagem em Binário");
+        ImGui::InputTextMultiline("##binary", this->binaryMessage, IM_ARRAYSIZE(this->binaryMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            strcpy(this->encryptedMessage, this->cripto->toChar(this->binaryMessage, strlen(this->binaryMessage)));
+            strcpy(this->originalMessage, this->cripto->decrypt(this->encryptedMessage, strlen(this->encryptedMessage)));
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+
         // Gráfico do processo de montagem
         ImGui::Text("Forma de Onda (Codificação)");
         if (!this->encryptionWaveform.empty()) {
             ImGui::PlotLines("##plot_enc", this->encryptionWaveform.data(), this->encryptionWaveform.size(), 0, "Sinal", 0.0f, 1.0f, ImVec2(0, 80));
         } else {
             ImGui::Text("Gráfico gerado após a criptografia.");
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+
+        // Botão de Enviar
+        if (ImGui::Button("Enviar")) {
+            // Ação: Lógica de envio
         }
 
         ImGui::End();
