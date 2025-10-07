@@ -1,13 +1,21 @@
 #include "../../include/window_manager/WindowManager.h"
 
+#define PORT 4444
+#define RECEIVER_IP "127.0.0.1"
+
 // Definições de protótipos de funções de callback para o GLFW
 void glfwErrorCallback(int error, const char* description);
 
 WindowManager::WindowManager() {
 
-    const char* chave = "minhachave123";
-    size_t tamanhoChave = strlen(chave);
-    this->cripto = new Cripto(chave, tamanhoChave);
+    const char* key = "mykey123";
+    size_t keyLength = strlen(key);
+    this->cripto = new Cripto(key, keyLength);
+
+    this->sender_socket = new Socket();
+    this->receiver_socket = new Socket();
+    thread server_thread(&Socket::run_receiver_server, this->receiver_socket);
+    this_thread::sleep_for(chrono::seconds(1));
 
     glfwSetErrorCallback(glfwErrorCallback);
 
@@ -47,6 +55,13 @@ WindowManager::WindowManager() {
 }
 
 WindowManager::~WindowManager() {
+    this->sender_socket->closeSocket();
+    this->receiver_socket->closeSocket();
+    delete this->sender_socket;
+    delete this->receiver_socket;
+
+    delete this->cripto;
+
     destroyWindow();
 }
 
@@ -94,6 +109,7 @@ void WindowManager::createSenderWindow() {
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             strcpy(this->encryptedMessage, this->cripto->encrypt(this->originalMessage, strlen(this->originalMessage)));
             strcpy(this->binaryMessage, this->cripto->toBinary(this->encryptedMessage, strlen(this->originalMessage)));
+            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, strlen(this->binaryMessage));
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -104,6 +120,7 @@ void WindowManager::createSenderWindow() {
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             strcpy(this->originalMessage, this->cripto->decrypt(this->encryptedMessage, strlen(this->encryptedMessage)));
             strcpy(this->binaryMessage, this->cripto->toBinary(this->encryptedMessage, strlen(this->encryptedMessage)));
+            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, strlen(this->binaryMessage));
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -114,6 +131,7 @@ void WindowManager::createSenderWindow() {
         if (ImGui::IsItemDeactivatedAfterEdit()) {
             strcpy(this->encryptedMessage, this->cripto->toChar(this->binaryMessage, strlen(this->binaryMessage)));
             strcpy(this->originalMessage, this->cripto->decrypt(this->encryptedMessage, strlen(this->encryptedMessage)));
+            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, strlen(this->binaryMessage));
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -121,7 +139,7 @@ void WindowManager::createSenderWindow() {
         // Gráfico do processo de montagem
         ImGui::Text("Forma de Onda (Codificação)");
         if (!this->encryptionWaveform.empty()) {
-            ImGui::PlotLines("##plot_enc", this->encryptionWaveform.data(), this->encryptionWaveform.size(), 0, "Sinal", 0.0f, 1.0f, ImVec2(0, 80));
+            ImGui::PlotLines("##plot_enc", this->encryptionWaveform.data(), this->encryptionWaveform.size(), 0, "", 0.0f, 1.0f, ImVec2(0, 80));
         } else {
             ImGui::Text("Gráfico gerado após a criptografia.");
         }
@@ -130,7 +148,14 @@ void WindowManager::createSenderWindow() {
 
         // Botão de Enviar
         if (ImGui::Button("Enviar")) {
-            // Ação: Lógica de envio
+            if (sender_socket->createSocket()) {
+                if (sender_socket->connectToReceiver(RECEIVER_IP, PORT)) {
+                    sender_socket->sendData(this->binaryMessage);
+                    ImGui::OpenPopup("Mensagem Enviada!");
+                } else {
+                    ImGui::OpenPopup("Falha ao conectar com Receiver");
+                }
+            }
         }
 
         ImGui::End();
@@ -143,6 +168,19 @@ void WindowManager::createReceiverWindow() {
 
     while (!glfwWindowShouldClose(this->window)) {
         glfwPollEvents();
+
+        if (this->receiver_socket->createSocket() && this->receiver_socket->bindSocket(PORT) && this->receiver_socket->listenForRequests()) {
+            int client_sock = this->receiver_socket->acceptConnection();
+            if (client_sock != -1) {
+                std::string data = this->receiver_socket->receiveData(client_sock);
+                strncpy(this->receivedMessage, data.c_str(), sizeof(this->receivedMessage) - 1);
+                //this->receivedMessage[sizeof(this->receivedMessage) - 1] = '\0'; // Garantir terminação nula
+                //strcpy(this->decryptedMessage, this->cripto->decrypt(this->receivedMessage, strlen(this->receivedMessage)));
+                //char* binary = this->cripto->toBinary(this->decryptedMessage, strlen(this->decryptedMessage));
+                //this->decryptionWaveform = this->cripto->generateWaveform(binary, strlen(binary));
+                //delete[] binary;
+            }
+        }
 
         // Inicia um novo frame do ImGui
         ImGui_ImplOpenGL3_NewFrame();

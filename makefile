@@ -10,6 +10,7 @@ BUILD_DIR := ./build
 # Arquivos fonte
 SRCS := $(SRC_DIR)/main.cpp \
 		$(SRC_DIR)/cripto/Cripto.cpp \
+		$(SRC_DIR)/socket/Socket.cpp \
 		$(SRC_DIR)/window_manager/WindowManager.cpp \
         $(GLAD_DIR)/glad.c
 

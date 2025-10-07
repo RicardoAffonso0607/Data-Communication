@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <thread>
+#include <chrono>
 using namespace std;
 
 // Header files do ImGui
@@ -16,6 +18,9 @@ using namespace std;
 
 // Header da classe para lidar com criptografia
 #include "../../include/cripto/Cripto.h"
+
+// Header da classe para lidar com sockets
+#include "../../include/socket/Socket.h"
 
 class WindowManager {
 private:
@@ -34,6 +39,8 @@ private:
     GLFWwindow* window;
 
     Cripto* cripto;
+    Socket* sender_socket;
+    Socket* receiver_socket;
 
 public:
     explicit WindowManager();

@@ -2,10 +2,10 @@
 
 #include <cstring> 
 #include <bitset>
+#include <vector>
 
 class Cripto {
     public:
-        // The constructor now accepts a key of type char* and its size.
         Cripto(const char* encryptionKey, size_t keySize);
         ~Cripto();
 
@@ -14,6 +14,7 @@ class Cripto {
 
         char* toBinary(const char* input, size_t keySize);
         char* toChar(const char* binaryInput, size_t binarySize); 
+        std::vector<float> generateWaveform(const char* binaryInput, size_t binarySize, float highValue = 1.0f, float lowValue = 0.0f, size_t samplesPerBit = 10);
 
     private:
         char* key;

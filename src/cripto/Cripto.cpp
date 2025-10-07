@@ -67,3 +67,17 @@ char* Cripto::toChar(const char* binaryInput, size_t binarySize) {
 
     return charRepresentation;
 }
+
+std::vector<float> Cripto::generateWaveform(const char* binaryInput, size_t binarySize, float highValue, float lowValue, size_t samplesPerBit) {
+    std::vector<float> waveform;
+    waveform.reserve(binarySize * samplesPerBit);
+
+    for (size_t i = 0; i < binarySize; ++i) {
+        float value = (binaryInput[i] == '1') ? highValue : lowValue;
+        for (size_t j = 0; j < samplesPerBit; ++j) {
+            waveform.push_back(value);
+        }
+    }
+
+    return waveform;
+}
