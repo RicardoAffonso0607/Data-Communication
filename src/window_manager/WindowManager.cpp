@@ -14,7 +14,26 @@ WindowManager::WindowManager() {
 
     this->sender_socket = new Socket();
     this->receiver_socket = new Socket();
+    this->sender_connected = false;
+    this->message_received = false;
+    this->message_decrypted = false;
+    this->notification_timer = 0.0f;
+    
+    // Configura o callback para quando uma mensagem é recebida
+    this->receiver_socket->setMessageCallback([this](const std::string& data) {
+        // data contém dados binários, não é necessariamente string com null-terminator
+        memcpy(this->receivedMessage, data.data(), data.size());
+        this->receivedMessage_size = data.size();
+        this->message_received = true;
+        this->message_decrypted = false;
+        this->notification_timer = 5.0f; // Notificação por 5 segundos
+        
+        // Gera o waveform a partir da mensagem binária recebida
+        this->decryptionWaveform = this->cripto->generateWaveform(this->receivedMessage, data.size());
+    });
+    
     thread server_thread(&Socket::run_receiver_server, this->receiver_socket);
+    server_thread.detach();  // Libera a thread para rodar independentemente
     this_thread::sleep_for(chrono::seconds(1));
 
     glfwSetErrorCallback(glfwErrorCallback);
@@ -55,12 +74,17 @@ WindowManager::WindowManager() {
 }
 
 WindowManager::~WindowManager() {
-    this->sender_socket->closeSocket();
-    this->receiver_socket->closeSocket();
-    delete this->sender_socket;
-    delete this->receiver_socket;
-
-    delete this->cripto;
+    if (this->sender_socket) {
+        this->sender_socket->closeSocket();
+        delete this->sender_socket;
+    }
+    if (this->receiver_socket) {
+        this->receiver_socket->closeSocket();
+        delete this->receiver_socket;
+    }
+    if (this->cripto) {
+        delete this->cripto;
+    }
 
     destroyWindow();
 }
@@ -86,6 +110,15 @@ void WindowManager::render() {
 
 void WindowManager::createSenderWindow() {
     
+    // Tenta conectar ao receiver uma única vez
+    if (!this->sender_connected) {
+        if (this->sender_socket->createSocket()) {
+            if (this->sender_socket->connectToReceiver(RECEIVER_IP, PORT)) {
+                this->sender_connected = true;
+            }
+        }
+    }
+    
     while (!glfwWindowShouldClose(this->window)) {
         glfwPollEvents();
 
@@ -107,9 +140,20 @@ void WindowManager::createSenderWindow() {
         // Campo para digitar a mensagem original
         ImGui::InputTextMultiline("Mensagem Original", this->originalMessage, IM_ARRAYSIZE(this->originalMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
         if (ImGui::IsItemDeactivatedAfterEdit()) {
-            strcpy(this->encryptedMessage, this->cripto->encrypt(this->originalMessage, strlen(this->originalMessage)));
-            strcpy(this->binaryMessage, this->cripto->toBinary(this->encryptedMessage, strlen(this->originalMessage)));
-            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, strlen(this->binaryMessage));
+            size_t msg_len = strlen(this->originalMessage);
+            char* encrypted = this->cripto->encrypt(this->originalMessage, msg_len);
+            memcpy(this->encryptedMessage, encrypted, msg_len);
+            this->encryptedMessage_size = msg_len;
+            delete[] encrypted;
+            
+            char* binary = this->cripto->toBinary(this->encryptedMessage, msg_len);
+            size_t bin_len = msg_len * 8;
+            memcpy(this->binaryMessage, binary, bin_len);
+            this->binaryMessage_size = bin_len;
+            this->binaryMessage[bin_len] = '\0';
+            delete[] binary;
+            
+            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, bin_len);
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -118,9 +162,19 @@ void WindowManager::createSenderWindow() {
         ImGui::Text("Mensagem Criptografada");
         ImGui::InputTextMultiline("##encrypted", this->encryptedMessage, IM_ARRAYSIZE(this->encryptedMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
         if (ImGui::IsItemDeactivatedAfterEdit()) {
-            strcpy(this->originalMessage, this->cripto->decrypt(this->encryptedMessage, strlen(this->encryptedMessage)));
-            strcpy(this->binaryMessage, this->cripto->toBinary(this->encryptedMessage, strlen(this->encryptedMessage)));
-            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, strlen(this->binaryMessage));
+            size_t enc_len = this->encryptedMessage_size > 0 ? this->encryptedMessage_size : strlen(this->encryptedMessage);
+            char* decrypted = this->cripto->decrypt(this->encryptedMessage, enc_len);
+            strcpy(this->originalMessage, decrypted);
+            delete[] decrypted;
+            
+            char* binary = this->cripto->toBinary(this->encryptedMessage, enc_len);
+            size_t bin_len = enc_len * 8;
+            memcpy(this->binaryMessage, binary, bin_len);
+            this->binaryMessage_size = bin_len;
+            this->binaryMessage[bin_len] = '\0';
+            delete[] binary;
+            
+            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, bin_len);
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -129,9 +183,18 @@ void WindowManager::createSenderWindow() {
         ImGui::Text("Mensagem em Binário");
         ImGui::InputTextMultiline("##binary", this->binaryMessage, IM_ARRAYSIZE(this->binaryMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
         if (ImGui::IsItemDeactivatedAfterEdit()) {
-            strcpy(this->encryptedMessage, this->cripto->toChar(this->binaryMessage, strlen(this->binaryMessage)));
-            strcpy(this->originalMessage, this->cripto->decrypt(this->encryptedMessage, strlen(this->encryptedMessage)));
-            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, strlen(this->binaryMessage));
+            size_t bin_len = this->binaryMessage_size > 0 ? this->binaryMessage_size : strlen(this->binaryMessage);
+            char* encrypted = this->cripto->toChar(this->binaryMessage, bin_len);
+            size_t enc_len = bin_len / 8;
+            memcpy(this->encryptedMessage, encrypted, enc_len);
+            this->encryptedMessage_size = enc_len;
+            delete[] encrypted;
+            
+            char* decrypted = this->cripto->decrypt(this->encryptedMessage, enc_len);
+            strcpy(this->originalMessage, decrypted);
+            delete[] decrypted;
+            
+            this->encryptionWaveform = this->cripto->generateWaveform(this->binaryMessage, bin_len);
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -139,22 +202,29 @@ void WindowManager::createSenderWindow() {
         // Gráfico do processo de montagem
         ImGui::Text("Forma de Onda (Codificação)");
         if (!this->encryptionWaveform.empty()) {
-            ImGui::PlotLines("##plot_enc", this->encryptionWaveform.data(), this->encryptionWaveform.size(), 0, "", 0.0f, 1.0f, ImVec2(0, 80));
+            ImGui::PlotLines("##plot_enc", this->encryptionWaveform.data(), (int)this->encryptionWaveform.size(), 0, nullptr, 0.0f, 1.0f, ImVec2(-1.0f, 100));
         } else {
             ImGui::Text("Gráfico gerado após a criptografia.");
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
+        // Status da conexão
+        if (this->sender_connected) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Conectado ao Receiver");
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Desconectado - Receiver não disponível");
+        }
+
         // Botão de Enviar
         if (ImGui::Button("Enviar")) {
-            if (sender_socket->createSocket()) {
-                if (sender_socket->connectToReceiver(RECEIVER_IP, PORT)) {
-                    sender_socket->sendData(this->binaryMessage);
-                    ImGui::OpenPopup("Mensagem Enviada!");
-                } else {
-                    ImGui::OpenPopup("Falha ao conectar com Receiver");
-                }
+            if (this->sender_connected) {
+                // Envia binaryMessage com o tamanho correto (binaryMessage_size)
+                std::string payload(this->binaryMessage, this->binaryMessage_size);
+                this->sender_socket->sendData(payload);
+                ImGui::OpenPopup("Mensagem Enviada!");
+            } else {
+                ImGui::OpenPopup("Falha ao conectar com Receiver");
             }
         }
 
@@ -165,21 +235,13 @@ void WindowManager::createSenderWindow() {
 }
 
 void WindowManager::createReceiverWindow() {
-
+    
     while (!glfwWindowShouldClose(this->window)) {
         glfwPollEvents();
-
-        if (this->receiver_socket->createSocket() && this->receiver_socket->bindSocket(PORT) && this->receiver_socket->listenForRequests()) {
-            int client_sock = this->receiver_socket->acceptConnection();
-            if (client_sock != -1) {
-                std::string data = this->receiver_socket->receiveData(client_sock);
-                strncpy(this->receivedMessage, data.c_str(), sizeof(this->receivedMessage) - 1);
-                //this->receivedMessage[sizeof(this->receivedMessage) - 1] = '\0'; // Garantir terminação nula
-                //strcpy(this->decryptedMessage, this->cripto->decrypt(this->receivedMessage, strlen(this->receivedMessage)));
-                //char* binary = this->cripto->toBinary(this->decryptedMessage, strlen(this->decryptedMessage));
-                //this->decryptionWaveform = this->cripto->generateWaveform(binary, strlen(binary));
-                //delete[] binary;
-            }
+        
+        // Diminui o timer de notificação
+        if (this->notification_timer > 0.0f) {
+            this->notification_timer -= ImGui::GetIO().DeltaTime;
         }
 
         // Inicia um novo frame do ImGui
@@ -195,26 +257,85 @@ void WindowManager::createReceiverWindow() {
         // --- Coluna 2: Processo de Recebimento (Receiver) ---
         ImGui::Text("Lado do Receptor (Recebimento)");
         ImGui::Separator();
+        ImGui::Dummy(ImVec2(0.0f, 10.0f));
         
-        // Campo editável para a mensagem recebida
-        ImGui::Text("Mensagem Recebida");
-        ImGui::InputTextMultiline("##received", this->receivedMessage, IM_ARRAYSIZE(this->receivedMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
-
-        // Botão de Descriptografar
-        if (ImGui::Button("Descriptografar")) {
-            // Ação: Lógica de descriptografia
+        // Mostrar notificação se recebeu mensagem recentemente
+        if (this->notification_timer > 0.0f && this->message_received) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "✓ Mensagem Recebida!");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Descrição gerado. Clique em 'Descriptografar' para visualizar.");
+        } else if (this->message_received) {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Mensagem anterior recebida.");
+        } else {
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.0f, 1.0f), "⏳ Aguardando mensagem...");
         }
+        
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+        
+        // Campo editável para a mensagem recebida (APENAS LEITURA)
+        ImGui::Text("Mensagem Recebida (Binária)");
+        ImGui::InputTextMultiline("##received", this->receivedMessage, IM_ARRAYSIZE(this->receivedMessage), 
+            ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4), ImGuiInputTextFlags_ReadOnly);
 
-        // Campo editável para a mensagem descriptografada 
-        ImGui::Text("Mensagem Descriptografada");
-        ImGui::InputTextMultiline("##decrypted", this->decryptedMessage, IM_ARRAYSIZE(this->decryptedMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
         
         // Gráfico do processo de desmontagem 
         ImGui::Text("Forma de Onda (Decodificação)");
         if (!this->decryptionWaveform.empty()) {
-            ImGui::PlotLines("##plot_dec", this->decryptionWaveform.data(), this->decryptionWaveform.size(), 0, "Sinal", 0.0f, 1.0f, ImVec2(0, 80));
+            ImGui::PlotLines("##plot_dec", this->decryptionWaveform.data(), (int)this->decryptionWaveform.size(), 0, nullptr, 0.0f, 1.0f, ImVec2(-1.0f, 100));
         } else {
-            ImGui::Text("Gráfico gerado após a descriptografia.");
+            ImGui::Text("Gráfico será gerado quando uma mensagem for recebida.");
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+        
+        // Campo para a mensagem criptografada (convertida de binário)
+        ImGui::Text("Mensagem Criptografada");
+        if (this->message_received) {
+            // Se recebeu mensagem, mostra a mensagem criptografada
+            size_t recv_len = this->receivedMessage_size > 0 ? this->receivedMessage_size : strlen(this->receivedMessage);
+            char* from_binary = this->cripto->toChar(this->receivedMessage, recv_len);
+            size_t enc_len = recv_len / 8;
+            memcpy(this->encryptedMessage, from_binary, enc_len);
+            this->encryptedMessage[enc_len] = '\0';
+            delete[] from_binary;
+        }
+        ImGui::InputTextMultiline("##encrypted_receiver", this->encryptedMessage, IM_ARRAYSIZE(this->encryptedMessage), 
+            ImVec2(-1.0f, ImGui::GetTextLineHeight() * 3), ImGuiInputTextFlags_ReadOnly);
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+        
+        // Botão de Descriptografar (desabilitado até receber mensagem)
+        ImGui::BeginDisabled(!this->message_received);
+        if (ImGui::Button("Descriptografar", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+            if (this->message_received) {
+                // Descriptografa: 
+                // 1. De binário (string de 0s e 1s) → char (texto criptografado)
+                size_t recv_len = this->receivedMessage_size > 0 ? this->receivedMessage_size : strlen(this->receivedMessage);
+                char* from_binary = this->cripto->toChar(this->receivedMessage, recv_len);
+                size_t enc_len = recv_len / 8;
+                
+                // 2. De char criptografado → texto original (usando XOR)
+                char* decrypted_text = this->cripto->decrypt(from_binary, enc_len);
+                
+                strcpy(this->decryptedMessage, decrypted_text);
+                this->message_decrypted = true;
+                
+                // Limpar memória alocada
+                delete[] from_binary;
+                delete[] decrypted_text;
+            }
+        }
+        ImGui::EndDisabled();
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+        
+        // Campo editável para a mensagem descriptografada (APENAS LEITURA)
+        ImGui::Text("Mensagem Descriptografada");
+        ImGui::InputTextMultiline("##decrypted", this->decryptedMessage, IM_ARRAYSIZE(this->decryptedMessage), 
+            ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4), ImGuiInputTextFlags_ReadOnly);
+        
+        if (!this->message_decrypted && this->message_received) {
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "ℹ Clique em 'Descriptografar' para visualizar a mensagem original.");
         }
 
         ImGui::End();

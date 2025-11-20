@@ -60,6 +60,19 @@ sender: all
 receiver: all
 	./$(BUILD_DIR)/$(EXECUTABLE) "receiver"
 
+# Rodar receiver em background e depois sender
+run-both: all
+	@echo "Iniciando Receiver em background..."
+	./$(BUILD_DIR)/$(EXECUTABLE) "receiver" &
+	@echo "Receiver PID: $$!"
+	@sleep 2
+	@echo "Iniciando Sender..."
+	./$(BUILD_DIR)/$(EXECUTABLE) "sender"
+
 # Regra para limpar os arquivos gerados
 clean:
 	rm -rf $(BUILD_DIR)
+
+# Kill todos os processos do programa
+killall-app:
+	pkill -f "$(EXECUTABLE)" || true

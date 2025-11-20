@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 // Condicionais para compilação em diferentes sistemas operacionais
 #ifdef _WIN32
@@ -15,10 +16,14 @@
 #define PORT 4444
 #define RECEIVER_IP "127.0.0.1"
 
+// Tipo de callback para mensagens recebidas
+using MessageCallback = std::function<void(const std::string&)>;
+
 class Socket {
     private:
         int sock_fd;
         sockaddr_in server_addr;
+        MessageCallback on_message_received;
 
     #ifdef _WIN32
         WSADATA wsaData;
@@ -41,6 +46,7 @@ class Socket {
         std::string receiveData(int target_sock_fd);
 
         void run_receiver_server();
+        void setMessageCallback(MessageCallback callback);
         
         void closeSocket();
 };

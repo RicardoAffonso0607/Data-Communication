@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
         windowManager->createReceiverWindow();
     }
 
-    windowManager->destroyWindow();
+    delete windowManager;
 
     return 0;
 }
