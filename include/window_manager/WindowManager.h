@@ -7,25 +7,31 @@
 #include <chrono>
 using namespace std;
 
-// Header files do ImGui
+// ImGui header files
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
-// Header files do GLFW e GLAD
+// GLFW and GLAD header files
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-// Header da classe para lidar com criptografia
+// Header for cryptography class
 #include "../../include/cripto/Cripto.h"
 
-// Header da classe para lidar com sockets
+// Header for socket class
 #include "../../include/socket/Socket.h"
+
+// Header for configuration class
+#include "../../include/config/Config.h"
+
+// Header for encoding class (NRZ, RZ)
+#include "../../include/codificacao/Codificacao.h"
 
 class WindowManager {
 private:
     // Sender
-    // Increased buffers to support longer messages (multiple sentences)
+    // Buffers to support longer messages (multiple sentences)
     // Previous size: 2048
     static constexpr size_t MESSAGE_BUF_SIZE = 16384; // 16 KB
     char originalMessage[MESSAGE_BUF_SIZE];
@@ -44,16 +50,26 @@ private:
     vector<float> encryptionWaveform;
     vector<float> decryptionWaveform;
 
+    // New encoding fields (Sender)
+    vector<float> senderNRZ_Waveform;
+    vector<float> senderRZ_Waveform;
+    Codificacao::Tipo senderActiveEncoding = Codificacao::NRZ;
+    
+    // New encoding fields (Receiver)
+    vector<float> receiverNRZ_Waveform;
+    vector<float> receiverRZ_Waveform;
+    Codificacao::Tipo receiverActiveEncoding = Codificacao::NRZ;
+
     GLFWwindow* window;
 
-    Cripto* cripto;
+    Crypto* crypto;
     Socket* sender_socket;
     Socket* receiver_socket;
     
-    // Estado das conexões
+    // Connection state
     bool sender_connected;
     
-    // Estado do receiver
+    // Receiver state
     bool message_received;
     bool message_decrypted;
     float notification_timer;

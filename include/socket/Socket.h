@@ -3,7 +3,7 @@
 #include <string>
 #include <functional>
 
-// Condicionais para compilação em diferentes sistemas operacionais
+// Conditional compilation for different operating systems
 #ifdef _WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -13,10 +13,7 @@
 #include <unistd.h>
 #endif
 
-#define PORT 4444
-#define RECEIVER_IP "127.0.0.1"
-
-// Tipo de callback para mensagens recebidas
+// Callback type for received messages
 using MessageCallback = std::function<void(const std::string&)>;
 
 class Socket {
@@ -24,13 +21,15 @@ class Socket {
         int sock_fd;
         sockaddr_in server_addr;
         MessageCallback on_message_received;
+        std::string receiver_ip;
+        int port;
 
     #ifdef _WIN32
         WSADATA wsaData;
     #endif
 
     public:
-        Socket();
+        Socket(const std::string& ip = "127.0.0.1", int p = 4444);
         ~Socket();
 
         bool createSocket();
@@ -47,6 +46,7 @@ class Socket {
 
         void run_receiver_server();
         void setMessageCallback(MessageCallback callback);
+        void setConfig(const std::string& ip, int p);
         
         void closeSocket();
 };

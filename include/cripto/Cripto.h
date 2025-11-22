@@ -4,10 +4,10 @@
 #include <bitset>
 #include <vector>
 
-class Cripto {
+class Crypto {
     public:
-        Cripto(const char* encryptionKey, size_t keySize);
-        ~Cripto();
+        Crypto(const char* encryptionKey, size_t keySize);
+        ~Crypto();
 
         char* encrypt(const char* plainText, size_t keySize);
         char* decrypt(const char* encryptedText, size_t keySize);

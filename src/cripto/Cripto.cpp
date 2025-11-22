@@ -1,18 +1,18 @@
 #include "../../include/cripto/Cripto.h"
 
 // Constructor
-Cripto::Cripto(const char* encryptionKey, size_t keySize) {
+Crypto::Crypto(const char* encryptionKey, size_t keySize) {
     // Allocate memory for the key and copy it.
     this->key = new char[keySize + 1];
     strcpy(this->key, encryptionKey);
     this->keySize = keySize;
 }
 
-Cripto::~Cripto() {
+Crypto::~Crypto() {
     delete[] this->key;
 }
 
-char* Cripto::encrypt(const char* plainText, size_t messageSize) {
+char* Crypto::encrypt(const char* plainText, size_t messageSize) {
     char* encryptedText = new char[messageSize + 1]; // +1 for null terminator
     if (!this->key) {
         // If the key doesn't exist, copy the plain text without encrypting.
@@ -30,13 +30,13 @@ char* Cripto::encrypt(const char* plainText, size_t messageSize) {
     return encryptedText;
 }
 
-char* Cripto::decrypt(const char* encryptedText, size_t messageSize) {
+char* Crypto::decrypt(const char* encryptedText, size_t messageSize) {
     // For XOR encryption, the decryption process is the same as encryption.
     // Just call the same function.
     return encrypt(encryptedText, messageSize);
 }
 
-char* Cripto::toBinary(const char* input, size_t inputSize) {
+char* Crypto::toBinary(const char* input, size_t inputSize) {
     // Each character will be represented by 8 bits.
     size_t binarySize = inputSize * 8;
     char* binaryRepresentation = new char[binarySize + 1]; // +1 for null terminator
@@ -54,7 +54,7 @@ char* Cripto::toBinary(const char* input, size_t inputSize) {
     return binaryRepresentation;
 }
 
-char* Cripto::toChar(const char* binaryInput, size_t binarySize) {
+char* Crypto::toChar(const char* binaryInput, size_t binarySize) {
     // Each 8 bits represent one character.
     size_t charSize = binarySize / 8;
     char* charRepresentation = new char[charSize + 1]; // +1 for null terminator
@@ -68,7 +68,7 @@ char* Cripto::toChar(const char* binaryInput, size_t binarySize) {
     return charRepresentation;
 }
 
-std::vector<float> Cripto::generateWaveform(const char* binaryInput, size_t binarySize, float highValue, float lowValue, size_t samplesPerBit) {
+std::vector<float> Crypto::generateWaveform(const char* binaryInput, size_t binarySize, float highValue, float lowValue, size_t samplesPerBit) {
     std::vector<float> waveform;
     waveform.reserve(binarySize * samplesPerBit);
 

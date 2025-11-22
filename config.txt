@@ -1,0 +1,11 @@
+# Cripto-Com Configuration File
+# Configuração para o sistema de comunicação criptografada
+
+# IP do computador que rodará o Receiver
+# Para máquinas locais: 127.0.0.1 ou localhost
+# Para máquinas remotas: coloque o IP da rede (ex: 192.168.1.100)
+RECEIVER_IP=127.0.0.1
+
+# Porta para comunicação
+# Certifique-se de que a porta está liberada no firewall
+PORT=4444

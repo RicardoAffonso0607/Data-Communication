@@ -5,7 +5,8 @@
 #include <cstdint>
 #include <endian.h>
 
-Socket::Socket() : sock_fd(-1), on_message_received(nullptr) {
+Socket::Socket(const std::string& ip, int p) 
+    : sock_fd(-1), on_message_received(nullptr), receiver_ip(ip), port(p) {
 #ifdef _WIN32
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "WSAStartup failed." << std::endl;
@@ -145,21 +146,21 @@ std::string Socket::receiveData(int target_sock_fd) {
 }
 
 void Socket::run_receiver_server() {
-    if (this->createSocket() && this->bindSocket(4444) && this->listenForRequests()) {
-        std::cout << "Receiver server running on port 4444..." << std::endl;
+    if (this->createSocket() && this->bindSocket(this->port) && this->listenForRequests()) {
+        std::cout << "✅ Receiver server running on port " << this->port << "..." << std::endl;
         while (true) {
             int client_sock = this->acceptConnection();
             if (client_sock != -1) {
-                // Recebe mensagens continuamente na mesma conexão
+                // Continuously receives messages on the same connection
                 while (true) {
                     std::string data = this->receiveData(client_sock);
                     
-                    // Se recebeu dados vazios, conexão foi fechada
+                    // If empty data received, connection was closed
                     if (data.empty()) {
                         break;
                     }
                     
-                    // Chama o callback se foi definido
+                    // Calls the callback if it was set
                     if (this->on_message_received) {
                         this->on_message_received(data);
                     }
@@ -177,6 +178,11 @@ void Socket::run_receiver_server() {
 
 void Socket::setMessageCallback(MessageCallback callback) {
     this->on_message_received = callback;
+}
+
+void Socket::setConfig(const std::string& ip, int p) {
+    this->receiver_ip = ip;
+    this->port = p;
 }
 
 void Socket::closeSocket() {
