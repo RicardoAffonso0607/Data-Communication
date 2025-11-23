@@ -24,14 +24,14 @@ std::vector<float> Codificacao::generateNRZ(const std::string& binaryData) {
 std::string Codificacao::generateMessageNRZ(const std::string& binaryData) {
     /**
      * NRZ Message Format:
-     * - Bit '0' = represented as "-"
+     * - Bit '0' = represented as "0"
      * - Bit '1' = represented as "+"
      */
     std::string message;
     message.reserve(binaryData.size());
     
     for (char bit : binaryData) {
-        message += (bit == '1') ? '+' : '-';
+        message += (bit == '1') ? '+' : '0';
     }
     
     return message;
