@@ -21,6 +21,22 @@ std::vector<float> Codificacao::generateNRZ(const std::string& binaryData) {
     return waveform;
 }
 
+std::string Codificacao::generateMessageNRZ(const std::string& binaryData) {
+    /**
+     * NRZ Message Format:
+     * - Bit '0' = represented as "-"
+     * - Bit '1' = represented as "+"
+     */
+    std::string message;
+    message.reserve(binaryData.size());
+    
+    for (char bit : binaryData) {
+        message += (bit == '1') ? '+' : '-';
+    }
+    
+    return message;
+}
+
 std::vector<float> Codificacao::generateRZ(const std::string& binaryData) {
     /**
      * RZ (Return-to-Zero):
@@ -54,11 +70,39 @@ std::vector<float> Codificacao::generateRZ(const std::string& binaryData) {
     return waveform;
 }
 
+std::string Codificacao::generateMessageRZ(const std::string& binaryData) {
+    /**
+     * RZ Message Format:
+     * - Bit '0' = represented as "-0" (negative level, returns to zero)
+     * - Bit '1' = represented as "+0" (positive level, returns to zero)
+     */
+    std::string message;
+    message.reserve(binaryData.size() * 2);
+    
+    for (char bit : binaryData) {
+        if (bit == '1') {
+            message += "+0";
+        } else {
+            message += "-0";
+        }
+    }
+    
+    return message;
+}
+
 std::vector<float> Codificacao::gerar(const std::string& binaryData, Tipo tipo) {
     if (tipo == NRZ) {
         return generateNRZ(binaryData);
     } else {
         return generateRZ(binaryData);
+    }
+}
+
+std::string Codificacao::generateMessage(const std::string& binaryData, Tipo tipo) {
+    if (tipo == NRZ) {
+        return generateMessageNRZ(binaryData);
+    } else {
+        return generateMessageRZ(binaryData);
     }
 }
 

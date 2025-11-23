@@ -24,20 +24,43 @@ WindowManager::WindowManager() {
     
     // Set callback for when a message is received
     this->receiver_socket->setMessageCallback([this](const std::string& data) {
-        // data contains binary data, not necessarily a null-terminated string
-        memcpy(this->receivedMessage, data.data(), data.size());
-        this->receivedMessage_size = data.size();
-        this->message_received = true;
-        this->message_decrypted = false;
-        this->notification_timer = 5.0f; // Notification for 5 seconds
+        // Receive three messages in sequence:
+        // First call: Binary message
+        // Second call: NRZ message
+        // Third call: RZ message
         
-        // Generate waveform from received binary message
-        this->decryptionWaveform = this->crypto->generateWaveform(this->receivedMessage, data.size());
-        
-        // Generate encoding graphics
-        std::string binary_str(this->receivedMessage, this->receivedMessage_size);
-        this->receiverNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
-        this->receiverRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+        // Check which message we're receiving by checking if receivedMessage is empty
+        if (this->receivedMessage_size == 0 || 
+            (strlen(this->receivedMessage) > 0 && strlen(this->receivedNrzMessage) > 0 && strlen(this->receivedRzMessage) > 0)) {
+            // First message (Binary)
+            memcpy(this->receivedMessage, data.data(), data.size());
+            this->receivedMessage_size = data.size();
+            memset(this->receivedNrzMessage, 0, MESSAGE_BUF_SIZE);
+            memset(this->receivedRzMessage, 0, MESSAGE_BUF_SIZE);
+            this->receivedNrzMessage_size = 0;
+            this->receivedRzMessage_size = 0;
+        } else if (this->receivedNrzMessage_size == 0 && this->receivedMessage_size > 0) {
+            // Second message (NRZ)
+            memcpy(this->receivedNrzMessage, data.data(), data.size());
+            this->receivedNrzMessage_size = data.size();
+            memset(this->receivedRzMessage, 0, MESSAGE_BUF_SIZE);
+            this->receivedRzMessage_size = 0;
+        } else {
+            // Third message (RZ)
+            memcpy(this->receivedRzMessage, data.data(), data.size());
+            this->receivedRzMessage_size = data.size();
+            this->message_received = true;
+            this->message_decrypted = false;
+            this->notification_timer = 5.0f; // Notification for 5 seconds
+            
+            // Generate waveform from received binary message
+            this->decryptionWaveform = this->crypto->generateWaveform(this->receivedMessage, this->receivedMessage_size);
+            
+            // Generate encoding graphics
+            std::string binary_str(this->receivedMessage, this->receivedMessage_size);
+            this->receiverNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
+            this->receiverRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+        }
     });
     
     thread server_thread(&Socket::run_receiver_server, this->receiver_socket);
@@ -152,29 +175,55 @@ void WindowManager::createSenderWindow() {
         ImGui::Text("Lado do Remetente (Envio)");
         ImGui::Separator();
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
-
         // Input field for original message
-        ImGui::InputTextMultiline("Original Message", this->originalMessage, IM_ARRAYSIZE(this->originalMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
-        if (ImGui::IsItemDeactivatedAfterEdit()) {
+        bool original_edited = ImGui::InputTextMultiline("Original Message", this->originalMessage, IM_ARRAYSIZE(this->originalMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4));
+        if (original_edited) {
             size_t msg_len = strlen(this->originalMessage);
-            char* encrypted = this->crypto->encrypt(this->originalMessage, msg_len);
-            memcpy(this->encryptedMessage, encrypted, msg_len);
-            this->encryptedMessage_size = msg_len;
-            delete[] encrypted;
             
-            char* binary = this->crypto->toBinary(this->encryptedMessage, msg_len);
-            size_t bin_len = msg_len * 8;
-            memcpy(this->binaryMessage, binary, bin_len);
-            this->binaryMessage_size = bin_len;
-            this->binaryMessage[bin_len] = '\0';
-            delete[] binary;
-            
-            this->encryptionWaveform = this->crypto->generateWaveform(this->binaryMessage, bin_len);
-            
-            // Update encoding graphics
-            std::string binary_str(this->binaryMessage, this->binaryMessage_size);
-            this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
-            this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+            if (msg_len > 0) {
+                char* encrypted = this->crypto->encrypt(this->originalMessage, msg_len);
+                memcpy(this->encryptedMessage, encrypted, msg_len);
+                this->encryptedMessage_size = msg_len;
+                delete[] encrypted;
+                
+                char* binary = this->crypto->toBinary(this->encryptedMessage, msg_len);
+                size_t bin_len = msg_len * 8;
+                memcpy(this->binaryMessage, binary, bin_len);
+                this->binaryMessage_size = bin_len;
+                this->binaryMessage[bin_len] = '\0';
+                delete[] binary;
+                
+                this->encryptionWaveform = this->crypto->generateWaveform(this->binaryMessage, bin_len);
+                
+                // Update encoding graphics and messages
+                std::string binary_str(this->binaryMessage, this->binaryMessage_size);
+                this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
+                this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+                
+                // Generate NRZ and RZ messages
+                std::string nrz_msg = Codificacao::generateMessage(binary_str, Codificacao::NRZ);
+                std::string rz_msg = Codificacao::generateMessage(binary_str, Codificacao::RZ);
+                
+                memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
+                strcpy(this->nrzMessage, nrz_msg.c_str());
+                strcpy(this->rzMessage, rz_msg.c_str());
+                this->nrzMessage_size = nrz_msg.length();
+                this->rzMessage_size = rz_msg.length();
+            } else {
+                // Clear all fields when original is empty
+                memset(this->encryptedMessage, 0, MESSAGE_BUF_SIZE);
+                this->encryptedMessage_size = 0;
+                memset(this->binaryMessage, 0, MESSAGE_BUF_SIZE);
+                this->binaryMessage_size = 0;
+                memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
+                this->nrzMessage_size = 0;
+                this->rzMessage_size = 0;
+                this->encryptionWaveform.clear();
+                this->senderNRZ_Waveform.clear();
+                this->senderRZ_Waveform.clear();
+            }
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
@@ -201,10 +250,33 @@ void WindowManager::createSenderWindow() {
                 
                 this->encryptionWaveform = this->crypto->generateWaveform(this->binaryMessage, bin_len);
                 
-                // Update encoding graphics
+                // Update encoding graphics and messages
                 std::string binary_str(this->binaryMessage, this->binaryMessage_size);
                 this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
                 this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+                
+                // Generate NRZ and RZ messages
+                std::string nrz_msg = Codificacao::generateMessage(binary_str, Codificacao::NRZ);
+                std::string rz_msg = Codificacao::generateMessage(binary_str, Codificacao::RZ);
+                
+                memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
+                strcpy(this->nrzMessage, nrz_msg.c_str());
+                strcpy(this->rzMessage, rz_msg.c_str());
+                this->nrzMessage_size = nrz_msg.length();
+                this->rzMessage_size = rz_msg.length();
+            } else {
+                // Clear all fields when encrypted is empty
+                memset(this->originalMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->binaryMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
+                this->binaryMessage_size = 0;
+                this->nrzMessage_size = 0;
+                this->rzMessage_size = 0;
+                this->encryptionWaveform.clear();
+                this->senderNRZ_Waveform.clear();
+                this->senderRZ_Waveform.clear();
             }
         }
 
@@ -231,17 +303,35 @@ void WindowManager::createSenderWindow() {
                 
                 this->encryptionWaveform = this->crypto->generateWaveform(this->binaryMessage, this->binaryMessage_size);
                 
-                // Update encoding graphics
+                // Update encoding graphics and messages
                 std::string binary_str(this->binaryMessage, this->binaryMessage_size);
                 this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
                 this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+                
+                // Generate NRZ and RZ messages
+                std::string nrz_msg = Codificacao::generateMessage(binary_str, Codificacao::NRZ);
+                std::string rz_msg = Codificacao::generateMessage(binary_str, Codificacao::RZ);
+                
+                memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
+                strcpy(this->nrzMessage, nrz_msg.c_str());
+                strcpy(this->rzMessage, rz_msg.c_str());
+                this->nrzMessage_size = nrz_msg.length();
+                this->rzMessage_size = rz_msg.length();
+            } else if (this->binaryMessage_size == 0) {
+                // Clear all fields when binary is empty
+                memset(this->originalMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->encryptedMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
+                memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
+                this->encryptedMessage_size = 0;
+                this->nrzMessage_size = 0;
+                this->rzMessage_size = 0;
+                this->encryptionWaveform.clear();
+                this->senderNRZ_Waveform.clear();
+                this->senderRZ_Waveform.clear();
             }
         }
-
-        ImGui::Dummy(ImVec2(0.0f, 15.0f));
-
-        // Graph of assembly process
-        ImGui::Text("Waveform (Encryption)");
         if (!this->encryptionWaveform.empty()) {
             ImGui::PlotLines("##plot_enc", this->encryptionWaveform.data(), (int)this->encryptionWaveform.size(), 0, nullptr, 0.0f, 1.0f, ImVec2(-1.0f, 100));
         } else {
@@ -249,43 +339,44 @@ void WindowManager::createSenderWindow() {
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
-
-        // New Encoding Graph (NRZ vs RZ)
-        ImGui::Text("Line Encoding");
-        ImGui::Text("Algorithm: %s", Codificacao::getTypeName(this->senderActiveEncoding));
         
-        // Checkbox to switch between NRZ and RZ
-        bool use_nrz = (this->senderActiveEncoding == Codificacao::NRZ);
-        if (ImGui::Checkbox("Use NRZ##sender", &use_nrz)) {
-            this->senderActiveEncoding = use_nrz ? Codificacao::NRZ : Codificacao::RZ;
+        // Show NRZ graph
+        ImGui::Text("NRZ (Non-Return-to-Zero)");
+        ImGui::InputTextMultiline("##nrz_msg", this->nrzMessage, IM_ARRAYSIZE(this->nrzMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4), ImGuiInputTextFlags_ReadOnly);
+
+        if (!this->binaryMessage_size == 0 && !this->senderNRZ_Waveform.empty()) {
+            ImGui::PlotLines("##plot_nrz", this->senderNRZ_Waveform.data(), (int)this->senderNRZ_Waveform.size(), 0, nullptr, -1.5f, 1.5f, ImVec2(-1.0f, 120));
+        } else {
+            ImGui::Text("NRZ graph will be generated after encoding.");
         }
         
-        ImGui::SameLine();
-        ImGui::Text("(uncheck for RZ)");
+        ImGui::Dummy(ImVec2(0.0f, 10.0f));
         
-        // Show corresponding graph
-        if (!this->binaryMessage_size == 0) {
-            const std::vector<float>& active_waveform = 
-                (this->senderActiveEncoding == Codificacao::NRZ) ? 
-                this->senderNRZ_Waveform : this->senderRZ_Waveform;
-            
-            if (!active_waveform.empty()) {
-                ImGui::PlotLines("##plot_codificacao", active_waveform.data(), (int)active_waveform.size(), 0, nullptr, -1.5f, 1.5f, ImVec2(-1.0f, 150));
-            } else {
-                ImGui::Text("Graph will be generated after encoding.");
-            }
+        // Show RZ graph
+        ImGui::Text("RZ (Return-to-Zero)");
+        ImGui::InputTextMultiline("##rz_msg", this->rzMessage, IM_ARRAYSIZE(this->rzMessage), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4), ImGuiInputTextFlags_ReadOnly);
+        if (!this->binaryMessage_size == 0 && !this->senderRZ_Waveform.empty()) {
+            ImGui::PlotLines("##plot_rz", this->senderRZ_Waveform.data(), (int)this->senderRZ_Waveform.size(), 0, nullptr, -1.5f, 1.5f, ImVec2(-1.0f, 120));
         } else {
-            ImGui::Text("No binary data to encode.");
+            ImGui::Text("RZ graph will be generated after encoding.");
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
-
-        // Send button
         if (ImGui::Button("Send")) {
             if (this->sender_connected) {
-                // Sends binaryMessage with the correct size (binaryMessage_size)
-                std::string payload(this->binaryMessage, this->binaryMessage_size);
-                this->sender_socket->sendData(payload);
+                // Send three messages in sequence:
+                // 1. Binary Message
+                std::string binary_payload(this->binaryMessage, this->binaryMessage_size);
+                this->sender_socket->sendData(binary_payload);
+                
+                // 2. NRZ Message
+                std::string nrz_payload(this->nrzMessage, this->nrzMessage_size);
+                this->sender_socket->sendData(nrz_payload);
+                
+                // 3. RZ Message
+                std::string rz_payload(this->rzMessage, this->rzMessage_size);
+                this->sender_socket->sendData(rz_payload);
+                
                 ImGui::OpenPopup("Message Sent!");
             } else {
                 ImGui::OpenPopup("Failed to connect with Receiver");
@@ -339,11 +430,6 @@ void WindowManager::createReceiverWindow() {
         ImGui::Text("Received Message (Binary)");
         ImGui::InputTextMultiline("##received", this->receivedMessage, IM_ARRAYSIZE(this->receivedMessage), 
             ImVec2(-1.0f, ImGui::GetTextLineHeight() * 4), ImGuiInputTextFlags_ReadOnly);
-
-        ImGui::Dummy(ImVec2(0.0f, 15.0f));
-        
-        // Graph of disassembly process
-        ImGui::Text("Waveform (Decryption)");
         if (!this->decryptionWaveform.empty()) {
             ImGui::PlotLines("##plot_dec", this->decryptionWaveform.data(), (int)this->decryptionWaveform.size(), 0, nullptr, 0.0f, 1.0f, ImVec2(-1.0f, 100));
         } else {
@@ -352,35 +438,32 @@ void WindowManager::createReceiverWindow() {
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
 
-        // New Encoding Graph (NRZ vs RZ) - RECEIVER
-        ImGui::Text("Line Encoding (Received)");
-        ImGui::Text("Algorithm: %s", Codificacao::getTypeName(this->receiverActiveEncoding));
-        
-        // Checkbox to switch between NRZ and RZ
-        bool use_nrz_receiver = (this->receiverActiveEncoding == Codificacao::NRZ);
-        if (ImGui::Checkbox("Use NRZ##receiver", &use_nrz_receiver)) {
-            this->receiverActiveEncoding = use_nrz_receiver ? Codificacao::NRZ : Codificacao::RZ;
-        }
-        
-        ImGui::SameLine();
-        ImGui::Text("(uncheck for RZ)");
-        
-        // Show corresponding graph
-        if (this->message_received && this->receivedMessage_size > 0) {
-            const std::vector<float>& active_waveform = 
-                (this->receiverActiveEncoding == Codificacao::NRZ) ? 
-                this->receiverNRZ_Waveform : this->receiverRZ_Waveform;
-            
-            if (!active_waveform.empty()) {
-                ImGui::PlotLines("##plot_codificacao_receiver", active_waveform.data(), (int)active_waveform.size(), 0, nullptr, -1.5f, 1.5f, ImVec2(-1.0f, 150));
-            } else {
-                ImGui::Text("Graph will be generated after encoding.");
-            }
+        // Display received NRZ Message
+        ImGui::Text("Received NRZ (Non-Return-to-Zero) Message");
+        ImGui::InputTextMultiline("##received_nrz", this->receivedNrzMessage, IM_ARRAYSIZE(this->receivedNrzMessage), 
+            ImVec2(-1.0f, ImGui::GetTextLineHeight() * 3), ImGuiInputTextFlags_ReadOnly);
+        if (this->message_received && this->receivedMessage_size > 0 && !this->receiverNRZ_Waveform.empty()) {
+            ImGui::PlotLines("##plot_nrz_receiver", this->receiverNRZ_Waveform.data(), (int)this->receiverNRZ_Waveform.size(), 0, nullptr, -1.5f, 1.5f, ImVec2(-1.0f, 120));
         } else {
-            ImGui::Text("Waiting for message to encode.");
+            ImGui::Text("NRZ graph will be generated when a message is received.");
         }
 
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
+
+        // Display received RZ Message
+        ImGui::Text("Received RZ (Return-to-Zero) Message");
+        ImGui::InputTextMultiline("##received_rz", this->receivedRzMessage, IM_ARRAYSIZE(this->receivedRzMessage), 
+            ImVec2(-1.0f, ImGui::GetTextLineHeight() * 3), ImGuiInputTextFlags_ReadOnly);
+        if (this->message_received && this->receivedMessage_size > 0 && !this->receiverRZ_Waveform.empty()) {
+            ImGui::PlotLines("##plot_rz_receiver", this->receiverRZ_Waveform.data(), (int)this->receiverRZ_Waveform.size(), 0, nullptr, -1.5f, 1.5f, ImVec2(-1.0f, 120));
+        } else {
+            ImGui::Text("RZ graph will be generated when a message is received.");
+        }
+
+        ImGui::Dummy(ImVec2(0.0f, 15.0f));
+
+        // New Encoding Graphs (NRZ and RZ - both shown) - RECEIVER
+        ImGui::Text("Line Encoding (Received)");
         
         // Field for encrypted message (converted from binary)
         ImGui::Text("Encrypted Message");

@@ -37,15 +37,23 @@ private:
     char originalMessage[MESSAGE_BUF_SIZE];
     char binaryMessage[MESSAGE_BUF_SIZE]; 
     char encryptedMessage[MESSAGE_BUF_SIZE];
+    char nrzMessage[MESSAGE_BUF_SIZE];
+    char rzMessage[MESSAGE_BUF_SIZE];
     
     // Track actual sizes of encrypted/binary messages (since they contain binary data)
     size_t encryptedMessage_size = 0;
     size_t binaryMessage_size = 0;
+    size_t nrzMessage_size = 0;
+    size_t rzMessage_size = 0;
 
     // Receiver
     char decryptedMessage[MESSAGE_BUF_SIZE];
     char receivedMessage[MESSAGE_BUF_SIZE];
+    char receivedNrzMessage[MESSAGE_BUF_SIZE];
+    char receivedRzMessage[MESSAGE_BUF_SIZE];
     size_t receivedMessage_size = 0;
+    size_t receivedNrzMessage_size = 0;
+    size_t receivedRzMessage_size = 0;
 
     vector<float> encryptionWaveform;
     vector<float> decryptionWaveform;
