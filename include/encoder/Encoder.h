@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-class Codificacao {
+class Encoder {
 public:
     enum Tipo {
         NRZ,  // Non-Return-to-Zero

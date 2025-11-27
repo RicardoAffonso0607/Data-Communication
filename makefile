@@ -12,7 +12,7 @@ SRCS := $(SRC_DIR)/main.cpp \
 		$(SRC_DIR)/cripto/Cripto.cpp \
 		$(SRC_DIR)/socket/Socket.cpp \
 		$(SRC_DIR)/window_manager/WindowManager.cpp \
-		$(SRC_DIR)/codificacao/Codificacao.cpp \
+		$(SRC_DIR)/encoder/Encoder.cpp \
         $(GLAD_DIR)/glad.c
 
 # Arquivos fonte do ImGui

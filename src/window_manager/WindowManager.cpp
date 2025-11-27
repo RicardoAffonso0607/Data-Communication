@@ -58,8 +58,8 @@ WindowManager::WindowManager() {
             
             // Generate encoding graphics
             std::string binary_str(this->receivedMessage, this->receivedMessage_size);
-            this->receiverNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
-            this->receiverRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+            this->receiverNRZ_Waveform = Encoder::gerar(binary_str, Encoder::NRZ);
+            this->receiverRZ_Waveform = Encoder::gerar(binary_str, Encoder::RZ);
         }
     });
     
@@ -171,8 +171,8 @@ void WindowManager::createSenderWindow() {
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         ImGui::Begin("Cripto-Com", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 
-        // --- Coluna 1: Processo de Envio (Sender) ---
-        ImGui::Text("Lado do Remetente (Envio)");
+        // --- Sender Side ---
+        ImGui::Text("Sender Side");
         ImGui::Separator();
         ImGui::Dummy(ImVec2(0.0f, 15.0f));
         // Input field for original message
@@ -197,12 +197,12 @@ void WindowManager::createSenderWindow() {
                 
                 // Update encoding graphics and messages
                 std::string binary_str(this->binaryMessage, this->binaryMessage_size);
-                this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
-                this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+                this->senderNRZ_Waveform = Encoder::gerar(binary_str, Encoder::NRZ);
+                this->senderRZ_Waveform = Encoder::gerar(binary_str, Encoder::RZ);
                 
                 // Generate NRZ and RZ messages
-                std::string nrz_msg = Codificacao::generateMessage(binary_str, Codificacao::NRZ);
-                std::string rz_msg = Codificacao::generateMessage(binary_str, Codificacao::RZ);
+                std::string nrz_msg = Encoder::generateMessage(binary_str, Encoder::NRZ);
+                std::string rz_msg = Encoder::generateMessage(binary_str, Encoder::RZ);
                 
                 memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
                 memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
@@ -252,12 +252,12 @@ void WindowManager::createSenderWindow() {
                 
                 // Update encoding graphics and messages
                 std::string binary_str(this->binaryMessage, this->binaryMessage_size);
-                this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
-                this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+                this->senderNRZ_Waveform = Encoder::gerar(binary_str, Encoder::NRZ);
+                this->senderRZ_Waveform = Encoder::gerar(binary_str, Encoder::RZ);
                 
                 // Generate NRZ and RZ messages
-                std::string nrz_msg = Codificacao::generateMessage(binary_str, Codificacao::NRZ);
-                std::string rz_msg = Codificacao::generateMessage(binary_str, Codificacao::RZ);
+                std::string nrz_msg = Encoder::generateMessage(binary_str, Encoder::NRZ);
+                std::string rz_msg = Encoder::generateMessage(binary_str, Encoder::RZ);
                 
                 memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
                 memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
@@ -305,12 +305,12 @@ void WindowManager::createSenderWindow() {
                 
                 // Update encoding graphics and messages
                 std::string binary_str(this->binaryMessage, this->binaryMessage_size);
-                this->senderNRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::NRZ);
-                this->senderRZ_Waveform = Codificacao::gerar(binary_str, Codificacao::RZ);
+                this->senderNRZ_Waveform = Encoder::gerar(binary_str, Encoder::NRZ);
+                this->senderRZ_Waveform = Encoder::gerar(binary_str, Encoder::RZ);
                 
                 // Generate NRZ and RZ messages
-                std::string nrz_msg = Codificacao::generateMessage(binary_str, Codificacao::NRZ);
-                std::string rz_msg = Codificacao::generateMessage(binary_str, Codificacao::RZ);
+                std::string nrz_msg = Encoder::generateMessage(binary_str, Encoder::NRZ);
+                std::string rz_msg = Encoder::generateMessage(binary_str, Encoder::RZ);
                 
                 memset(this->nrzMessage, 0, MESSAGE_BUF_SIZE);
                 memset(this->rzMessage, 0, MESSAGE_BUF_SIZE);
@@ -410,7 +410,7 @@ void WindowManager::createReceiverWindow() {
         ImGui::Begin("Crypto-Com", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
         
         // --- Receiver Side (Reception Process) ---
-        ImGui::Text("Receiver Side (Reception)");
+        ImGui::Text("Receiver Side");
         ImGui::Separator();
         ImGui::Dummy(ImVec2(0.0f, 10.0f));
         

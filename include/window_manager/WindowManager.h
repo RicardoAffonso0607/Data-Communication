@@ -26,7 +26,7 @@ using namespace std;
 #include "../../include/config/Config.h"
 
 // Header for encoding class (NRZ, RZ)
-#include "../../include/codificacao/Codificacao.h"
+#include "../../include/encoder/Encoder.h"
 
 class WindowManager {
 private:
@@ -61,12 +61,12 @@ private:
     // New encoding fields (Sender)
     vector<float> senderNRZ_Waveform;
     vector<float> senderRZ_Waveform;
-    Codificacao::Tipo senderActiveEncoding = Codificacao::NRZ;
+    Encoder::Tipo senderActiveEncoding = Encoder::NRZ;
     
     // New encoding fields (Receiver)
     vector<float> receiverNRZ_Waveform;
     vector<float> receiverRZ_Waveform;
-    Codificacao::Tipo receiverActiveEncoding = Codificacao::NRZ;
+    Encoder::Tipo receiverActiveEncoding = Encoder::NRZ;
 
     GLFWwindow* window;
 

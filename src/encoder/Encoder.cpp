@@ -1,6 +1,6 @@
-#include "../../include/codificacao/Codificacao.h"
+#include "../../include/encoder/Encoder.h"
 
-std::vector<float> Codificacao::generateNRZ(const std::string& binaryData) {
+std::vector<float> Encoder::generateNRZ(const std::string& binaryData) {
     /**
      * NRZ (Non-Return-to-Zero):
      * - Bit '0' = -1.0 (low level)
@@ -21,7 +21,7 @@ std::vector<float> Codificacao::generateNRZ(const std::string& binaryData) {
     return waveform;
 }
 
-std::string Codificacao::generateMessageNRZ(const std::string& binaryData) {
+std::string Encoder::generateMessageNRZ(const std::string& binaryData) {
     /**
      * NRZ Message Format:
      * - Bit '0' = represented as "0"
@@ -37,7 +37,7 @@ std::string Codificacao::generateMessageNRZ(const std::string& binaryData) {
     return message;
 }
 
-std::vector<float> Codificacao::generateRZ(const std::string& binaryData) {
+std::vector<float> Encoder::generateRZ(const std::string& binaryData) {
     /**
      * RZ (Return-to-Zero):
      * - Bit '0' = returns to 0 in the middle of the period
@@ -70,7 +70,7 @@ std::vector<float> Codificacao::generateRZ(const std::string& binaryData) {
     return waveform;
 }
 
-std::string Codificacao::generateMessageRZ(const std::string& binaryData) {
+std::string Encoder::generateMessageRZ(const std::string& binaryData) {
     /**
      * RZ Message Format:
      * - Bit '0' = represented as "-0" (negative level, returns to zero)
@@ -90,7 +90,7 @@ std::string Codificacao::generateMessageRZ(const std::string& binaryData) {
     return message;
 }
 
-std::vector<float> Codificacao::gerar(const std::string& binaryData, Tipo tipo) {
+std::vector<float> Encoder::gerar(const std::string& binaryData, Tipo tipo) {
     if (tipo == NRZ) {
         return generateNRZ(binaryData);
     } else {
@@ -98,7 +98,7 @@ std::vector<float> Codificacao::gerar(const std::string& binaryData, Tipo tipo) 
     }
 }
 
-std::string Codificacao::generateMessage(const std::string& binaryData, Tipo tipo) {
+std::string Encoder::generateMessage(const std::string& binaryData, Tipo tipo) {
     if (tipo == NRZ) {
         return generateMessageNRZ(binaryData);
     } else {
@@ -106,6 +106,6 @@ std::string Codificacao::generateMessage(const std::string& binaryData, Tipo tip
     }
 }
 
-const char* Codificacao::getTypeName(Tipo tipo) {
+const char* Encoder::getTypeName(Tipo tipo) {
     return (tipo == NRZ) ? "NRZ (Non-Return-to-Zero)" : "RZ (Return-to-Zero)";
 }
